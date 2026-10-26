@@ -21,38 +21,6 @@ def split_and_standardize(X, y, n_total, seed):
     return (Xtr, ytr), (Xva, yva), (Xte, yte)
 
 
-def train_mlp(X, y, hidden, lr, wd, epochs=30, batch=256, seed=0):
-    rng = np.random.default_rng(seed)
-    n, d = X.shape
-    W1 = rng.normal(0, np.sqrt(2 / d), (d, hidden)); b1 = np.zeros(hidden)
-    w2 = rng.normal(0, np.sqrt(1 / hidden), hidden); b2 = np.zeros(1)
-    P = [W1, b1, w2, b2]
-    M = [np.zeros_like(p) for p in P]
-    V = [np.zeros_like(p) for p in P]
-    beta1, beta2, eps, t = 0.9, 0.999, 1e-8, 0
-
-    for _ in range(epochs):
-        perm = rng.permutation(n)
-        for i in range(0, n, batch):
-            ids = perm[i:i + batch]
-            Xb, yb = X[ids], y[ids]
-            # forward
-            H = np.maximum(0, Xb @ W1 + b1)
-            err = H @ w2 + b2 - yb
-            # backward (MSE + L2 weight decay)
-            dp = 2 * err / len(yb)
-            dH = np.outer(dp, w2) * (H > 0)
-            grads = [Xb.T @ dH + wd * W1, dH.sum(0),
-                     H.T @ dp + wd * w2, np.array([dp.sum()])]
-            # Adam
-            t += 1
-            for p, g, m, v in zip(P, grads, M, V):
-                m[:] = beta1 * m + (1 - beta1) * g
-                v[:] = beta2 * v + (1 - beta2) * g**2
-                p -= lr * (m / (1 - beta1**t)) / (np.sqrt(v / (1 - beta2**t)) + eps)
-    return P
-
-
 def mse(P, X, y):
     W1, b1, w2, b2 = P
     return np.mean((np.maximum(0, X @ W1 + b1) @ w2 + b2 - y) ** 2)
